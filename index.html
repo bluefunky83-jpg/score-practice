@@ -526,7 +526,6 @@ function applyVisibility(){
 function renderScore(){
   if(!S.osmd||!S.sheet) return;
   try{
-    S.osmd.Zoom=S.zoom;
     S.osmd.render();
   }catch(e){ status('악보 렌더 오류: '+e.message); return; }
   buildGeometry();
@@ -537,7 +536,7 @@ function renderScore(){
 }
 function buildGeometry(){
   var g=S.osmd&&(S.osmd.GraphicSheet||S.osmd.Graphic); if(!g) return;
-  var z=S.zoom||1;
+  var z=(S.osmd&&S.osmd.zoom)||1;
   var list=g.MeasureList||[];
   S.boxes=[]; S.sysIndex=new Map(); S.lineSystems=[];
   var sysMap=new Map();
@@ -547,7 +546,7 @@ function buildGeometry(){
       if(!gm||!gm.PositionAndShape) return;
       var ps=gm.PositionAndShape;
       var b={x:ps.AbsolutePosition.x*10*z,y:ps.AbsolutePosition.y*10*z,w:ps.Size.width*10*z,h:ps.Size.height*10*z};
-      if(b.w<=0||b.h<=0) return;
+      if(!b.w||!b.h) return;
       if(!box) box={x:b.x,y:b.y,w:b.w,h:b.h};
       else{
         var x1=Math.min(box.x,b.x), y1=Math.min(box.y,b.y), x2=Math.max(box.x+box.w,b.x+b.w), y2=Math.max(box.y+box.h,b.y+b.h);
@@ -560,16 +559,27 @@ function buildGeometry(){
     if(sys){
       if(!sysMap.has(sys)) sysMap.set(sys,{x:box.x,y:box.y,w:box.w,h:box.h,measures:[mi]});
       else{
-        var s=sysMap.get(sys);
-        var sx1=Math.min(s.x,box.x), sy1=Math.min(s.y,box.y), sx2=Math.max(s.x+s.w,box.x+box.w), sy2=Math.max(s.y+s.h,box.y+box.h);
-        s.x=sx1; s.y=sy1; s.w=sx2-sx1; s.h=sy2-sy1; s.measures.push(mi);
+        var s2=sysMap.get(sys);
+        var sx1=Math.min(s2.x,box.x), sy1=Math.min(s2.y,box.y), sx2=Math.max(s2.x+s2.w,box.x+box.w), sy2=Math.max(s2.y+s2.h,box.y+box.h);
+        s2.x=sx1; s2.y=sy1; s2.w=sx2-sx1; s2.h=sy2-sy1; s2.measures.push(mi);
       }
     }
   });
+  /* 파트 이름까지 한 줄에 포함되도록 시스템 폭을 넓힌다 */
+  sysMap.forEach(function(s3,sys){
+    try{
+      var sp=sys.PositionAndShape;
+      if(!sp) return;
+      var lx=sp.AbsolutePosition.x*10*z, lw=sp.Size.width*10*z;
+      var right=Math.max(s3.x+s3.w,lx+lw);
+      s3.x=Math.min(s3.x,lx);
+      s3.w=right-s3.x;
+    }catch(e){}
+  });
   S.lineSystems=Array.from(sysMap.values()).sort(function(a,b){ return a.y-b.y; });
-  S.lineSystems.forEach(function(s,idx){
-    s.idx=idx;
-    s.measures.forEach(function(mi){ S.sysIndex.set(mi,idx); });
+  S.lineSystems.forEach(function(s4,idx){
+    s4.idx=idx;
+    s4.measures.forEach(function(mi){ S.sysIndex.set(mi,idx); });
   });
 }
 function currentSystem(){
@@ -577,6 +587,11 @@ function currentSystem(){
   var idx=S.sysIndex.get(mi);
   if(idx===undefined||idx===null) return null;
   return S.lineSystems[idx]||null;
+}
+function cursorPx(){
+  var c=S.osmd&&S.osmd.cursor?S.osmd.cursor.cursorElement:null;
+  if(!c) return {x:0,y:0,h:0};
+  return {x:c.offsetLeft||0,y:c.offsetTop||0,h:c.offsetHeight||0};
 }
 function jumpCursorToMeasure(mi){
   if(!S.osmd||!S.sheet||!S.sheet.SourceMeasures||!S.sheet.SourceMeasures.length) return;
@@ -603,13 +618,18 @@ function cursorQ(){
 }
 function refineCursor(q){
   var cur=S.osmd&&S.osmd.cursor; if(!cur||!cur.iterator) return;
+  var moved=false;
   for(var k=0;k<16;k++){
     var t=cursorQ();
-    if(t===null||t>=q-0.03) break;
+    if(t===null||t>=q-0.02) break;
     try{
       if(cur.iterator.EndReached) break;
-      cur.next();
+      cur.next(); moved=true;
     }catch(e){ break; }
+  }
+  var t2=cursorQ();
+  if(moved&&t2!==null&&t2>q+0.02){
+    try{ cur.previous(); }catch(e){}
   }
 }
 function placeHighlight(mi){
@@ -626,35 +646,41 @@ function applyView(){
   if(!S.osmd||!S.sheet) return;
   var vw=vp.clientWidth, vh=vp.clientHeight;
   if(vw<10||vh<10) return;
-  stage.style.transform='none';
-  var svg=inner.querySelector('svg');
-  var nw=inner.scrollWidth, nh=inner.scrollHeight;
-  if(svg){
-    var r=svg.getBoundingClientRect();
-    if(r.width>3){ nw=Math.max(nw,r.width); nh=Math.max(nh,r.height); }
-  }
+  var nw=inner.scrollWidth||inner.offsetWidth;
+  var nh=inner.scrollHeight||inner.offsetHeight;
   if(!nw||!nh) return;
+  var zoom=S.zoom||1;
+  var cp=cursorPx();
   if(S.view==='line'){
-    vp.style.overflowY='hidden';
     var sys=currentSystem();
-    if(!sys){ return; }
+    if(!sys){ stage.style.transform='none'; return; }
     var pad=6;
     var availW=Math.max(60,vw-pad*2), availH=Math.max(60,vh-pad*2);
-    var sc=Math.min(availW/sys.w,availH/sys.h,3.2);
-    if(!isFinite(sc)||sc<=0) sc=1;
-    var tx=pad+(availW-sys.w*sc)/2-sys.x*sc;
-    var ty=pad+(availH-sys.h*sc)/2-sys.y*sc;
-    stage.style.transform='translate('+tx+'px,'+ty+'px) scale('+sc+')';
+    var base=Math.min(availW/sys.w, availH/sys.h);
+    if(!isFinite(base)||base<=0) base=1;
+    var sc=Math.min(base*zoom,4);
+    var cw=sys.w*sc, chh=sys.h*sc;
+    var tx,ty;
+    if(cw<=availW) tx=pad+(availW-cw)/2-sys.x*sc;
+    else tx=pad+availW*0.22-cp.x*sc;
+    if(chh<=availH) ty=pad+(availH-chh)/2-sys.y*sc;
+    else ty=pad+availH*0.3-cp.y*sc;
+    stage.style.transform='translate('+tx.toFixed(1)+'px,'+ty.toFixed(1)+'px) scale('+sc.toFixed(4)+')';
     S.viewScale=sc;
+    vp.style.overflow='hidden';
     $('scoreSpacer').style.height='0px';
-    vp.scrollTop=0;
   }else{
+    var fit=Math.min(vw/nw,1);
+    if(!isFinite(fit)||fit<=0) fit=1;
+    var sc2=fit*zoom;
+    var cw2=nw*sc2;
+    var tx2=0;
+    if(cw2>vw+1) tx2=Math.min(0, vw*0.3-cp.x*sc2);
+    stage.style.transform='translate('+tx2.toFixed(1)+'px,0px) scale('+sc2.toFixed(4)+')';
+    S.viewScale=sc2;
     vp.style.overflowY='auto';
-    var f=Math.min(1,vw/nw);
-    if(!isFinite(f)||f<=0) f=1;
-    S.viewScale=f;
-    stage.style.transform='scale('+f+')';
-    $('scoreSpacer').style.height=Math.ceil(nh*f)+6+'px';
+    vp.style.overflowX='hidden';
+    $('scoreSpacer').style.height=Math.ceil(nh*sc2)+6+'px';
     autoScroll(true);
   }
 }
@@ -663,7 +689,7 @@ function autoScroll(force){
   var c=S.osmd&&S.osmd.cursor?S.osmd.cursor.cursorElement:null;
   if(!c) return;
   var vp=$('scoreView');
-  var top=c.offsetTop*S.viewScale;
+  var top=(c.offsetTop||0)*S.viewScale;
   var h=(c.offsetHeight||30)*S.viewScale;
   var bandTop=vp.scrollTop+vp.clientHeight*0.22;
   var bandBot=vp.scrollTop+vp.clientHeight*0.72;
@@ -716,7 +742,7 @@ function tick(){
     S.currentMeasure=mi;
     jumpCursorToMeasure(mi);
     placeHighlight(mi);
-    if(S.view==='line') applyView(); else autoScroll(true);
+    applyView();
   }
   refineCursor(q);
   if(S.view==='whole') autoScroll(false);
@@ -771,12 +797,10 @@ $('progwrap').addEventListener('click',function(ev){
   applyLoopPoints();
   seekTo(q);
 });
-var zoomTimer=0;
 $('zoom').addEventListener('input',function(){
   $('zoomVal').textContent=this.value+'%';
   S.zoom=Number(this.value)/100;
-  clearTimeout(zoomTimer);
-  zoomTimer=setTimeout(function(){ renderScore(); },140);
+  applyView();
 });
 $('speed').addEventListener('input',function(){
   $('speedVal').textContent=this.value+'%';
