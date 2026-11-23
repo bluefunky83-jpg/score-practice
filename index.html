@@ -1017,10 +1017,25 @@ function refineCursor(q){
     try{ cur.previous(); }catch(e){}
   }
 }
+function measureRect(mi){
+  var k=-1;
+  for(var i=0;i<S.boxes.length;i++){ if(S.boxes[i].i===mi){ k=i; break; } }
+  if(k<0) return null;
+  var b=S.boxes[k], si=S.sysIndex.get(mi), right=null;
+  for(var j=k+1;j<S.boxes.length;j++){
+    if(S.sysIndex.get(S.boxes[j].i)!==si) break;
+    right=S.boxes[j].x-2; break;
+  }
+  if(right===null){
+    var sys=(si!==undefined&&si!==null)?S.lineSystems[si]:null;
+    right=sys?sys.x+sys.w:b.x+b.w;
+  }
+  var w=Math.max(b.w,right-b.x);
+  return {x:b.x,y:b.y,w:w,h:b.h};
+}
 function placeHighlight(mi){
   var hl=$('measureHl');
-  var b=null;
-  for(var i=0;i<S.boxes.length;i++) if(S.boxes[i].i===mi){ b=S.boxes[i]; break; }
+  var b=measureRect(mi);
   if(!b){ hl.style.opacity='0'; return; }
   hl.style.opacity='1';
   hl.style.left=b.x+'px'; hl.style.top=b.y+'px';
