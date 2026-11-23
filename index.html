@@ -335,10 +335,10 @@ function startPlay(){
     if(q<a-0.01||q>=b-0.01) q=a;
   }
   if(q>=totalQ()-0.01) q=$('loop').checked?loopAQ():0;
-  Tone.Transport.bpm.value=S.tempo*speedFactor();
   try{ Tone.Transport.stop(); }catch(e){}
-  Tone.Transport.ticks=toTicks(q);
-  Tone.Transport.start();
+  Tone.Transport.bpm.value=S.tempo*speedFactor();
+  try{ Tone.Transport.start(undefined,q*secPerQ()); }
+  catch(e){ Tone.Transport.ticks=toTicks(q); Tone.Transport.start(); }
   S.playing=true; setPlayIcon(true);
   ensureFrame();
 }
@@ -654,7 +654,7 @@ function applyView(){
   if(S.view==='line'){
     var sys=currentSystem();
     if(!sys){ stage.style.transform='none'; return; }
-    var pad=6;
+    var pad=8;
     var availW=Math.max(60,vw-pad*2), availH=Math.max(60,vh-pad*2);
     var base=Math.min(availW/sys.w, availH/sys.h);
     if(!isFinite(base)||base<=0) base=1;
