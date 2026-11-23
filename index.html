@@ -353,7 +353,7 @@ var S={
   playing:false, seekQ:0, currentMeasure:0, view:'line', viewScale:1,
   lineSystems:[], sysIndex:null, boxes:[], zoom:1,
   audioBuilt:false, hudAt:0, fired:0, errors:ERR, ready:false,
-  scoreName:'', midiName:'', masterVol:100, lastStatus:'', pickTimer:0
+  scoreName:'', midiName:'', masterVol:100, lastStatus:'', pickTimer:0, renderTimer:0
 };
 S.sysIndex=new Map();
 window.__practice={S:S,api:{}};
@@ -898,6 +898,13 @@ function renderScore(){
   try{
     S.osmd.render();
   }catch(e){ status('악보 렌더 오류: '+e.message); return; }
+  refreshGeometry();
+  /* OSMD가 배치를 한 박자 늦게 마무리하는 경우까지 한 번 더 맞춘다 */
+  clearTimeout(S.renderTimer);
+  S.renderTimer=setTimeout(refreshGeometry,220);
+}
+function refreshGeometry(){
+  if(!S.osmd||!S.sheet) return;
   buildGeometry();
   S.currentMeasure=clamp(S.currentMeasure,0,Math.max(0,S.measures.length-1));
   var q=S.seekQ||0;
