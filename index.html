@@ -673,8 +673,8 @@ function applyView(align){
   stage.style.transform='translate('+tx.toFixed(1)+'px,'+ty.toFixed(1)+'px) scale('+sc.toFixed(4)+')';
   spacer.style.width=Math.ceil(sw)+'px';
   spacer.style.height=Math.ceil(sh)+'px';
-  vp.style.overflowX=(sw>vw+1)?'auto':'hidden';
-  vp.style.overflowY='auto';
+  vp.style.overflowX=(sw>vw+2)?'auto':'hidden';
+  vp.style.overflowY=(sh>vh+2)?'auto':'hidden';
   followCursor(!!align);
 }
 function followCursor(force){
