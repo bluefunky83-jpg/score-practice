@@ -162,6 +162,10 @@ var $=function(id){return document.getElementById(id)};
 var ERR=[];
 window.addEventListener('error',function(e){ERR.push(String(e.message||e.error));});
 window.addEventListener('unhandledrejection',function(e){ERR.push('promise: '+String(e.reason));});
+try{
+  var _cre=console.error.bind(console);
+  console.error=function(){ ERR.push('console.error: '+Array.prototype.map.call(arguments,String).join(' ')); _cre.apply(null,arguments); };
+}catch(e){}
 
 var S={
   osmd:null, sheet:null, midi:null,
