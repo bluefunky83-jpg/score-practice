@@ -1048,6 +1048,16 @@ function applyView(align){
   }
   S.viewScale=sc; S.viewTx=tx; S.viewTy=ty;
   stage.style.transform='translate('+tx.toFixed(1)+'px,'+ty.toFixed(1)+'px) scale('+sc.toFixed(4)+')';
+  /* 한 줄 보기: 현재 시스템만 남기고 곡 제목·다른 줄은 잘라낸다 */
+  try{
+    if(S.view==='line'&&sys){
+      var ct=Math.max(0,sys.y), cl=Math.max(0,sys.x);
+      var cr=Math.max(0,nw-(sys.x+sys.w)), cb=Math.max(0,nh-(sys.y+sys.h));
+      inner.style.clipPath='inset('+ct.toFixed(1)+'px '+cr.toFixed(1)+'px '+cb.toFixed(1)+'px '+cl.toFixed(1)+'px)';
+    } else {
+      inner.style.clipPath='none';
+    }
+  }catch(e){}
   spacer.style.width=Math.ceil(sw)+'px';
   spacer.style.height=Math.ceil(sh)+'px';
   vp.style.overflowX=(sw>vw+2)?'auto':'hidden';
