@@ -403,7 +403,7 @@ function ensureOsmd(){
     drawPartAbbreviations:true,
     drawMeasureNumbers:true,
     drawTimeSignatures:true,
-    drawMetronomeMarks:true,
+    drawMetronomeMarks:false,
     drawLyrics:true,
     followCursor:false,
     cursorsOptions:[{type:1,color:'#1667d6',alpha:0.55,follow:false}]
@@ -565,15 +565,15 @@ function buildGeometry(){
       }
     }
   });
-  /* 파트 이름까지 한 줄에 포함되도록 시스템 폭을 넓힌다 */
+  /* 한 줄 보기는 시스템 전체 상자(파트 이름 포함)를 기준으로 자른다 */
   sysMap.forEach(function(s3,sys){
     try{
       var sp=sys.PositionAndShape;
-      if(!sp) return;
-      var lx=sp.AbsolutePosition.x*10*z, lw=sp.Size.width*10*z;
-      var right=Math.max(s3.x+s3.w,lx+lw);
-      s3.x=Math.min(s3.x,lx);
-      s3.w=right-s3.x;
+      if(!sp||!sp.Size.width||!sp.Size.height) return;
+      s3.x=sp.AbsolutePosition.x*10*z;
+      s3.y=sp.AbsolutePosition.y*10*z;
+      s3.w=sp.Size.width*10*z;
+      s3.h=sp.Size.height*10*z;
     }catch(e){}
   });
   S.lineSystems=Array.from(sysMap.values()).sort(function(a,b){ return a.y-b.y; });
