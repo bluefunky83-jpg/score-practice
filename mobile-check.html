@@ -6,6 +6,7 @@ iframe{width:390px;height:844px;border:0;background:#0a1424;box-shadow:0 8px 30p
 .info{font-size:12px;line-height:1.6;max-width:280px}
 </style></head>
 <body>
-<iframe id="phone" src="./index.html"></iframe>
+<iframe id="phone"></iframe>
 <div class="info">390x844 뷰포트 검증용 페이지. index.html을 iframe으로 띄웁니다.</div>
+<script>document.getElementById("phone").src="./index.html?cb="+Date.now();</script>
 </body></html>
