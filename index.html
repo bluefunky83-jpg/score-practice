@@ -532,7 +532,7 @@ function renderScore(){
   S.currentMeasure=clamp(S.currentMeasure,0,Math.max(0,S.measures.length-1));
   jumpCursorToMeasure(S.currentMeasure);
   placeHighlight(S.currentMeasure);
-  applyView();
+  applyView(true);
 }
 function buildGeometry(){
   var g=S.osmd&&(S.osmd.GraphicSheet||S.osmd.Graphic); if(!g) return;
@@ -641,8 +641,8 @@ function placeHighlight(mi){
   hl.style.left=b.x+'px'; hl.style.top=b.y+'px';
   hl.style.width=b.w+'px'; hl.style.height=b.h+'px';
 }
-function applyView(){
-  var vp=$('scoreView'), stage=$('scoreStage'), inner=$('scoreInner');
+function applyView(align){
+  var vp=$('scoreView'), stage=$('scoreStage'), inner=$('scoreInner'), spacer=$('scoreSpacer');
   if(!S.osmd||!S.sheet) return;
   var vw=vp.clientWidth, vh=vp.clientHeight;
   if(vw<10||vh<10) return;
@@ -650,58 +650,53 @@ function applyView(){
   var nh=inner.scrollHeight||inner.offsetHeight;
   if(!nw||!nh) return;
   var zoom=S.zoom||1;
-  var cp=cursorPx();
+  var sc=1, tx=0, ty=0, sw=vw, sh=vh, pad=8;
   if(S.view==='line'){
     var sys=currentSystem();
     if(!sys){ stage.style.transform='none'; return; }
-    var pad=8;
     var availW=Math.max(60,vw-pad*2), availH=Math.max(60,vh-pad*2);
-    var base=Math.min(availW/sys.w, availH/sys.h);
+    var base=Math.min(availW/sys.w,availH/sys.h);
     if(!isFinite(base)||base<=0) base=1;
-    var sc=Math.min(base*zoom,4);
+    sc=Math.min(base*zoom,4);
     var cw=sys.w*sc, chh=sys.h*sc;
-    var tx,ty;
-    if(cw<=availW) tx=pad+(availW-cw)/2-sys.x*sc;
-    else tx=pad+availW*0.22-cp.x*sc;
-    if(chh<=availH) ty=pad+(availH-chh)/2-sys.y*sc;
-    else ty=pad+availH*0.3-cp.y*sc;
-    stage.style.transform='translate('+tx.toFixed(1)+'px,'+ty.toFixed(1)+'px) scale('+sc.toFixed(4)+')';
-    S.viewScale=sc;
-    vp.style.overflow='hidden';
-    $('scoreSpacer').style.height='0px';
+    tx=(cw<=availW)?(pad+(availW-cw)/2-sys.x*sc):(pad-sys.x*sc);
+    ty=(chh<=availH)?(pad+(availH-chh)/2-sys.y*sc):(pad-sys.y*sc);
+    sw=Math.max(cw+pad*2,vw);
+    sh=Math.max(chh+pad*2,vh);
   }else{
     var fit=Math.min(vw/nw,1);
     if(!isFinite(fit)||fit<=0) fit=1;
-    var sc2=fit*zoom;
-    var cw2=nw*sc2;
-    var tx2=0;
-    if(cw2>vw+1) tx2=Math.min(0, vw*0.3-cp.x*sc2);
-    stage.style.transform='translate('+tx2.toFixed(1)+'px,0px) scale('+sc2.toFixed(4)+')';
-    S.viewScale=sc2;
-    vp.style.overflowY='auto';
-    vp.style.overflowX='hidden';
-    $('scoreSpacer').style.height=Math.ceil(nh*sc2)+6+'px';
-    autoScroll(true);
+    sc=fit*zoom;
+    sw=nw*sc; sh=nh*sc;
   }
+  S.viewScale=sc; S.viewTx=tx; S.viewTy=ty;
+  stage.style.transform='translate('+tx.toFixed(1)+'px,'+ty.toFixed(1)+'px) scale('+sc.toFixed(4)+')';
+  spacer.style.width=Math.ceil(sw)+'px';
+  spacer.style.height=Math.ceil(sh)+'px';
+  vp.style.overflowX=(sw>vw+1)?'auto':'hidden';
+  vp.style.overflowY='auto';
+  followCursor(!!align);
 }
-function autoScroll(force){
-  if(S.view!=='whole') return;
+function followCursor(force){
   var c=S.osmd&&S.osmd.cursor?S.osmd.cursor.cursorElement:null;
   if(!c) return;
-  var vp=$('scoreView');
-  var top=(c.offsetTop||0)*S.viewScale;
-  var h=(c.offsetHeight||30)*S.viewScale;
-  var bandTop=vp.scrollTop+vp.clientHeight*0.22;
-  var bandBot=vp.scrollTop+vp.clientHeight*0.72;
-  if(force||top<bandTop||top+h>bandBot){
-    vp.scrollTop=Math.max(0,Math.round(top-vp.clientHeight*0.32));
+  var vp=$('scoreView'), sc=S.viewScale||1;
+  var cx=(c.offsetLeft||0)*sc+(S.viewTx||0);
+  var top=(c.offsetTop||0)*sc+(S.viewTy||0);
+  var h=(c.offsetHeight||30)*sc;
+  var mw=vp.clientWidth, mh=vp.clientHeight;
+  if(cx<vp.scrollLeft+6||cx>vp.scrollLeft+mw-24){
+    vp.scrollLeft=Math.max(0,Math.round(cx-mw*0.3));
+  }
+  if(force||top<vp.scrollTop+6||top+h>vp.scrollTop+mh-6){
+    vp.scrollTop=Math.max(0,Math.round(top-mh*0.3));
   }
 }
 function setView(v){
   S.view=(v==='whole')?'whole':'line';
   $('btnLine').classList.toggle('on',S.view==='line');
   $('btnWhole').classList.toggle('on',S.view==='whole');
-  applyView();
+  applyView(true);
 }
 
 /* ---------- 진행/표시 ---------- */
@@ -725,7 +720,7 @@ function seekTo(q,noView){
   jumpCursorToMeasure(mi);
   refineCursor(q);
   placeHighlight(mi);
-  if(!noView) applyView();
+  if(!noView) applyView(true);
   hud(q,true);
 }
 var rafId=0;
@@ -742,10 +737,9 @@ function tick(){
     S.currentMeasure=mi;
     jumpCursorToMeasure(mi);
     placeHighlight(mi);
-    applyView();
+    applyView(true);
   }
   refineCursor(q);
-  if(S.view==='whole') autoScroll(false);
   hud(q,false);
 }
 
