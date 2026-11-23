@@ -397,8 +397,8 @@ function ensureOsmd(){
     autoResize:true,
     drawTitle:true,
     drawSubtitle:true,
-    drawComposer:true,
-    drawCredits:true,
+    drawComposer:false,
+    drawCredits:false,
     drawPartNames:true,
     drawPartAbbreviations:true,
     drawMeasureNumbers:true,
@@ -431,7 +431,7 @@ async function loadXmlText(text,name){
   }
   setView(S.view);
   seekTo(0,true);
-  status('악보 준비 완료 · '+S.measures.length+'마디');
+  status('악보 준비 완료 · '+S.measures.length+'마디'+matchNote());
 }
 async function loadMidiBuffer(buf,name){
   status('MIDI 불러오는 중…');
@@ -452,7 +452,13 @@ async function loadMidiBuffer(buf,name){
   configureTransport();
   applyLoopDefaults();
   seekTo(0,true);
-  status('MIDI 준비 완료 · '+S.midiTracks.length+'파트'+(S.sheet?'':', 악보 파일을 함께 선택하면 보기가 켜져'));
+  status('MIDI 준비 완료 · '+S.midiTracks.length+'파트'+(S.sheet?matchNote():', 악보 파일을 함께 선택하면 보기가 켜져'));
+}
+function matchNote(){
+  if(!S.sheet||!S.midi) return '';
+  var midiMeasures=Math.max(1,Math.round(S.midiTotalQ/4));
+  if(Math.abs(S.midiTotalQ-S.xmlTotalQ)>0.6) return ' · 악보와 MIDI 길이가 달라(악보 '+S.measures.length+'마디 / MIDI 약 '+midiMeasures+'마디) 위치가 어긋날 수 있어';
+  return '';
 }
 function loadMeasures(){
   var sm=S.sheet&&S.sheet.SourceMeasures;
