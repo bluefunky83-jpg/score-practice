@@ -504,7 +504,10 @@ function pickAll(){
 }
 function schedulePicker(){
   clearTimeout(S.pickTimer);
-  S.pickTimer=setTimeout(function(){ if(pickerItems().length) openPicker(); },420);
+  S.pickTimer=setTimeout(function(){
+    if(sheetOpen) return;              /* 설정 시트를 보는 중이면 방해하지 않는다 */
+    if(pickerItems().length) openPicker();
+  },420);
 }
 function updateFileInfo(){
   var el=$('fileInfo'); if(!el) return;
@@ -766,6 +769,7 @@ async function loadXmlText(text,name){
     configureTransport();
     initTracks();
   }
+  resetVisibility();
   setView(S.view);
   seekTo(0,true);
   updateBpm();
@@ -789,6 +793,7 @@ async function loadMidiBuffer(buf,name){
   S.tempo=S.xmlTempo||(midi.header.tempos[0]?midi.header.tempos[0].bpm:120);
   if(!S.measures.length) loadMeasures();
   initTracks();
+  resetVisibility();
   buildAudio();
   configureTransport();
   applyLoopDefaults();
@@ -805,6 +810,10 @@ function matchNote(){
   var midiMeasures=Math.max(1,Math.round(S.midiTotalQ/4));
   if(Math.abs(S.midiTotalQ-S.xmlTotalQ)>0.6) return ' · 악보 '+S.measures.length+'마디·MIDI 약 '+midiMeasures+'마디로 길이가 달라';
   return '';
+}
+function resetVisibility(){
+  S.partVis=[];
+  S.trackState.forEach(function(t){ t.visible=true; });
 }
 function loadMeasures(){
   var sm=S.sheet&&S.sheet.SourceMeasures;
