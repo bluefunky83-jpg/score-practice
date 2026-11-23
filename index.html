@@ -536,7 +536,7 @@ function renderScore(){
   applyView();
 }
 function buildGeometry(){
-  var g=S.osmd&&S.osmd.Graphic; if(!g) return;
+  var g=S.osmd&&(S.osmd.GraphicSheet||S.osmd.Graphic); if(!g) return;
   var z=S.zoom||1;
   var list=g.MeasureList||[];
   S.boxes=[]; S.sysIndex=new Map(); S.lineSystems=[];
@@ -686,7 +686,7 @@ function hud(q,force){
   var mi=measureIndexAtQ(q);
   var m=S.measures[mi];
   $('posBar').textContent=((m?m.number:mi+1)||1)+'마디 / '+(S.measures.length||'-');
-  $('posTime').textContent=fmt(q)+' / '+fmt(totalQ());
+  $('posTime').textContent=fmt(q*secPerQ())+' / '+fmt(totalQ()*secPerQ());
   var pct=totalQ()>0?clamp(q/totalQ(),0,1)*100:0;
   $('progFill').style.width=pct.toFixed(2)+'%';
 }
