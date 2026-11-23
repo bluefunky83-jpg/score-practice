@@ -137,7 +137,15 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:2px solid var(
 .tbtn.on{background:linear-gradient(180deg,var(--accent-hi),var(--accent-deep));border-color:rgba(90,170,240,.7);color:#fff}
 .tbtn.s.on{background:linear-gradient(180deg,#29c0b6,#178f88);border-color:#2ac4ba;color:#fff}
 .tbtn.eye{font-size:13px}
-.tbtn.eye.off{opacity:.35}
+.tbtn.eye{display:grid;place-items:center}
+.tbtn.eye svg{display:block;width:14px;height:14px}
+.tbtn.eye.off{opacity:.4}
+.sheet-body::-webkit-scrollbar,.modal::-webkit-scrollbar{width:6px}
+.sheet-body::-webkit-scrollbar-thumb,.modal::-webkit-scrollbar-thumb{background:#2a4a6d;border-radius:3px}
+.sheet-body::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track{background:transparent}
+#scoreView::-webkit-scrollbar{width:9px;height:9px}
+#scoreView::-webkit-scrollbar-thumb{background:#a9bcd2;border-radius:5px;border:2px solid #fff}
+#scoreView::-webkit-scrollbar-track{background:#fff}
 .mixrow{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;padding:9px 0;border-top:1px solid #162a40}
 .mixrow:first-child{border-top:0;padding-top:0}
 .mixrow .tname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;color:#e2eefa}
@@ -243,7 +251,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:2px solid var(
         <div class="row" style="gap:7px">
           <button id="visAll" class="mini" type="button">모두 선택</button>
           <button id="visNone" class="mini" type="button">선택 해제</button>
-          <span class="hint">👁 악보 표시 · M 음소거 · S 솔로</span>
+          <span class="hint">눈 아이콘 = 악보 표시 · M 음소거 · S 솔로</span>
         </div>
       </div>
       <div class="block">
@@ -836,6 +844,13 @@ function initTracks(){
   renderTracks();
   if(S.midi&&!S.audioBuilt) buildAudio();
 }
+function EYE_SVG(on){
+  return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'+
+    '<path d="M1.6 8S4 4.2 8 4.2 14.4 8 14.4 8 12 11.8 8 11.8 1.6 8 1.6 8z"/>'+
+    '<circle cx="8" cy="8" r="1.9"/>'+
+    (on?'':'<path d="M2.7 13.3 13.3 2.7"/>')+
+    '</svg>';
+}
 function renderTracks(){
   var items=pickerItems();
   var tc=$('trackCount'); if(tc) tc.textContent=S.trackState.length?('('+S.trackState.length+'파트)'):'(악보만)';
@@ -851,7 +866,7 @@ function renderTracks(){
         var row=document.createElement('div'); row.className='srow'; row.setAttribute('data-i',String(i));
         row.innerHTML='<div class="tname">'+esc(t.name)+'</div>'+
           '<div class="tbtns">'+
-          '<button class="tbtn eye'+(t.visible?'':' off')+'" type="button" data-a="eye" title="악보 표시" aria-label="악보 표시">👁</button>'+
+          '<button class="tbtn eye'+(t.visible?'':' off')+'" type="button" data-a="eye" title="악보 표시" aria-label="악보 표시">'+EYE_SVG(t.visible)+'</button>'+
           '<button class="tbtn m'+(t.mute?' on':'')+'" type="button" data-a="mute" title="음소거">M</button>'+
           '<button class="tbtn s'+(t.solo?' on':'')+'" type="button" data-a="solo" title="솔로">S</button>'+
           '</div>';
