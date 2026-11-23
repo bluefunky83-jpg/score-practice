@@ -337,7 +337,7 @@ function startPlay(){
   if(q>=totalQ()-0.01) q=$('loop').checked?loopAQ():0;
   try{ Tone.Transport.stop(); }catch(e){}
   Tone.Transport.bpm.value=S.tempo*speedFactor();
-  try{ Tone.Transport.start(undefined,q*secPerQ()); }
+  try{ Tone.Transport.start(undefined,toTicks(q)+'i'); }
   catch(e){ Tone.Transport.ticks=toTicks(q); Tone.Transport.start(); }
   S.playing=true; setPlayIcon(true);
   ensureFrame();
