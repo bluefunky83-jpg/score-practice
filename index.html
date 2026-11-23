@@ -922,8 +922,9 @@ function buildGeometry(){
   var sysMap=new Map();
   list.forEach(function(staves,mi){
     var box=null, sys=null;
-    (staves||[]).forEach(function(gm){
+    (staves||[]).forEach(function(gm,si){
       if(!gm||!gm.PositionAndShape) return;
+      if(!visOf(si)) return;   /* 화면에 그리지 않는 악기는 상자·줄 계산에서 제외 */
       var ps=gm.PositionAndShape;
       var b={x:ps.AbsolutePosition.x*10*z,y:ps.AbsolutePosition.y*10*z,w:ps.Size.width*10*z,h:ps.Size.height*10*z};
       if(!b.w||!b.h) return;
