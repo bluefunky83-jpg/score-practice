@@ -77,7 +77,7 @@ main{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:co
 .sheet-head h2{margin:0;font-size:15px;font-weight:700;letter-spacing:-.3px;color:#f2f7fd}
 .xbtn{margin-left:auto;width:36px;height:36px;border:0;background:transparent;color:#8ea7c2;font-size:14px;cursor:pointer;display:grid;place-items:center;border-radius:10px}
 .xbtn:active{background:#1b2f47;color:#fff}
-.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#2e4a68 transparent;padding:12px 12px 18px;display:flex;flex-direction:column;gap:11px;flex:1 1 auto;min-height:0}
+.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none;padding:12px 12px 18px;display:flex;flex-direction:column;gap:11px;flex:1 1 auto;min-height:0}
 .sheet-foot{flex:0 0 auto;padding:10px 12px calc(10px + var(--safe-b));border-top:1px solid var(--line-soft);background:linear-gradient(180deg,rgba(12,26,43,.4),rgba(12,26,43,.95))}
 
 /* 카드형 블록 */
@@ -140,9 +140,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:2px solid var(
 .tbtn.eye{display:grid;place-items:center}
 .tbtn.eye svg{display:block;width:14px;height:14px}
 .tbtn.eye.off{opacity:.4}
-.sheet-body::-webkit-scrollbar,.modal::-webkit-scrollbar{width:6px}
-.sheet-body::-webkit-scrollbar-thumb,.modal::-webkit-scrollbar-thumb{background:#2a4a6d;border-radius:3px}
-.sheet-body::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track{background:transparent}
+.sheet-body::-webkit-scrollbar,.modal::-webkit-scrollbar{display:none}
 #scoreView::-webkit-scrollbar{width:9px;height:9px}
 #scoreView::-webkit-scrollbar-thumb{background:#a9bcd2;border-radius:5px;border:2px solid #fff}
 #scoreView::-webkit-scrollbar-track{background:#fff}
@@ -156,7 +154,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:2px solid var(
 
 /* ---------- 악기 선택 모달 ---------- */
 .modal-wrap{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:18px}
-.modal{position:relative;width:100%;max-width:420px;max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#2e4a68 transparent;background:linear-gradient(180deg,#12243a,#0e1d31);border:1px solid #294663;border-radius:18px;padding:20px 22px 18px 20px;box-shadow:0 28px 70px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transform:translateY(12px) scale(.98);opacity:0;transition:transform .22s,opacity .22s}
+.modal{position:relative;width:100%;max-width:420px;max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none;background:linear-gradient(180deg,#12243a,#0e1d31);border:1px solid #294663;border-radius:18px;padding:20px 22px 18px 20px;box-shadow:0 28px 70px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transform:translateY(12px) scale(.98);opacity:0;transition:transform .22s,opacity .22s}
 .modal-wrap.open .modal{transform:none;opacity:1}
 .modal h2{font-size:16px;margin:0 0 8px;line-height:1.35;letter-spacing:-.4px;color:#f4f9ff;font-weight:700}
 .modal-sub{font-size:11.5px;color:var(--muted);margin:0 0 16px;line-height:1.6;letter-spacing:-.1px}
