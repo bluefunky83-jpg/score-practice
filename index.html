@@ -1083,8 +1083,12 @@ function applyView(align){
   }catch(e){}
   spacer.style.width=Math.ceil(sw)+'px';
   spacer.style.height=Math.ceil(sh)+'px';
+  S.viewW=sw; S.viewH=sh;
   vp.style.overflowX=(sw>vw+2)?'auto':'hidden';
   vp.style.overflowY=(sh>vh+2)?'auto':'hidden';
+  /* 넘칠 때만 스크롤. 딱 맞으면 이전 스크롤 값을 0으로 되돌린다 */
+  if(sw<=vw+2) vp.scrollLeft=0;
+  if(sh<=vh+2) vp.scrollTop=0;
   followCursor(!!align);
 }
 function followCursor(force){
@@ -1095,11 +1099,12 @@ function followCursor(force){
   var top=(c.offsetTop||0)*sc+(S.viewTy||0);
   var h=(c.offsetHeight||30)*sc;
   var mw=vp.clientWidth, mh=vp.clientHeight;
-  if(cx<vp.scrollLeft+6||cx>vp.scrollLeft+mw-24){
-    vp.scrollLeft=Math.max(0,Math.round(cx-mw*0.3));
+  var canX=(S.viewW||0)>mw+2, canY=(S.viewH||0)>mh+2;
+  if(canX&&(cx<vp.scrollLeft+6||cx>vp.scrollLeft+mw-24)){
+    vp.scrollLeft=clamp(Math.round(cx-mw*0.3),0,Math.round((S.viewW||mw)-mw));
   }
-  if(force||top<vp.scrollTop+6||top+h>vp.scrollTop+mh-6){
-    vp.scrollTop=Math.max(0,Math.round(top-mh*0.3));
+  if(canY&&(force||top<vp.scrollTop+6||top+h>vp.scrollTop+mh-6)){
+    vp.scrollTop=clamp(Math.round(top-mh*0.3),0,Math.round((S.viewH||mh)-mh));
   }
 }
 function setView(v){
