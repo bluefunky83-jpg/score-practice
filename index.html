@@ -538,7 +538,7 @@ function pickOnly(i){
   pickerItems().forEach(function(it){ setVis(it.i,it.i===i); });
   closePicker();
   applyVisibility();
-  var t=S.trackState[i]||S.parts[i];
+  var t=S.parts[i];
   status((t&&t.name?t.name:'악기')+'만 악보에 표시 · 소리는 모든 악기 그대로');
 }
 function pickAll(){
