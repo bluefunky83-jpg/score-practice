@@ -99,6 +99,15 @@ main{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:co
 .presets{display:flex;gap:6px;flex-wrap:wrap}
 .preset{flex:1 1 0;min-width:48px;padding:9px 2px;border-radius:9px;border:1px solid #22394f;background:#12233a;color:#c8d9ec;font-size:11.5px;font-weight:700;cursor:pointer;text-align:center;font-variant-numeric:tabular-nums;letter-spacing:-.1px}
 .preset.on{background:linear-gradient(180deg,rgba(74,163,239,.3),rgba(31,108,184,.35));border-color:rgba(74,163,239,.7);color:#fff}
+.tr-row{display:flex;align-items:center;gap:8px}
+.tr-btn{flex:0 0 auto;width:40px;height:40px;border-radius:11px;border:1px solid #274059;background:#152740;color:#cfe0f5;font-size:19px;font-weight:700;line-height:1;cursor:pointer;padding:0;display:grid;place-items:center;transition:background .15s,color .15s}
+.tr-btn:active{background:#1e3651;color:#fff}
+.tr-btn:disabled{opacity:.34}
+.tr-val{flex:1 1 0;min-width:0;height:40px;display:flex;align-items:center;justify-content:center;gap:3px;border:1px solid var(--line);border-radius:11px;background:#091625;color:#f2f7fd;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.2px;white-space:nowrap;overflow:hidden}
+.tr-val .u{font-size:10.5px;font-weight:700;color:#9dc2e6;letter-spacing:0}
+.tr-val.on{border-color:rgba(74,163,239,.62);background:linear-gradient(180deg,rgba(47,134,216,.24),rgba(47,134,216,.1));color:#fff}
+.tr-val.on .u{color:#a9d3f6}
+.tr-badge{flex:0 0 auto;font-size:9.5px;font-weight:800;color:#dcefff;background:rgba(47,134,216,.32);border:1px solid rgba(74,163,239,.62);border-radius:999px;padding:1px 5px;letter-spacing:-.1px;font-variant-numeric:tabular-nums}
 .field{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--muted);min-width:0}
 .field b{color:#e2eefa;font-weight:700}
 .field input[type=range]{width:100%;margin:0}
@@ -184,7 +193,7 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:2px solid var(
   <button id="play" class="playbtn" type="button" aria-label="재생">▶</button>
   <button id="stop" class="stopbtn" type="button" aria-label="정지">■</button>
   <button id="barInfo" class="barinfo" type="button" aria-label="재생 옵션 열기">
-    <span id="posBar">1/8</span><span class="sep">·</span><span id="bpmVal">100</span><span class="unit">BPM</span>
+    <span id="posBar">1/8</span><span class="sep">·</span><span id="bpmVal">100</span><span class="unit">BPM</span><span id="transBadge" class="tr-badge" hidden>+2키</span>
   </button>
   <span class="spacer"></span>
   <button id="btnScreen" class="iconbtn" type="button" aria-label="화면·악기 설정">
@@ -286,6 +295,16 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:2px solid var(
         <input id="speed" type="range" min="50" max="200" step="5" value="100" aria-label="속도">
       </div>
       <div class="block">
+        <div class="block-title">조변경 (이조) <span class="side"><span id="trRange" style="color:#9fc0e4">−12 ~ +12 반음</span></span></div>
+        <div class="tr-row">
+          <button id="trDown" class="tr-btn" type="button" aria-label="반음 내리기">−</button>
+          <div id="trVal" class="tr-val" aria-live="polite">0 <span class="u">(원키)</span></div>
+          <button id="trUp" class="tr-btn" type="button" aria-label="반음 올리기">+</button>
+          <button id="trReset" class="mini" type="button">원키</button>
+        </div>
+        <p class="note">악보와 소리가 함께 반음씩 올라가거나 내려가요 · 드럼·퍼커션은 그대로</p>
+      </div>
+      <div class="block">
         <div class="row"><span class="row-label">구간 반복</span><label class="switch"><input id="loop" type="checkbox" aria-label="구간 반복"><span class="knob"></span></label><span class="hint" id="posTime">0:00.0 / 0:00.0</span></div>
         <div class="steppers">
           <div class="stepper-row"><span class="lab">시작</span>
@@ -359,7 +378,8 @@ var S={
   playing:false, seekQ:0, currentMeasure:0, view:'line', viewScale:1,
   lineSystems:[], sysIndex:null, boxes:[], zoom:1,
   audioBuilt:false, hudAt:0, fired:0, errors:ERR, ready:false,
-  scoreName:'', midiName:'', masterVol:100, lastStatus:'', pickTimer:0, renderTimer:0
+  scoreName:'', midiName:'', masterVol:100, lastStatus:'', pickTimer:0, renderTimer:0,
+  transpose:0, percParts:[]
 };
 S.sysIndex=new Map();
 window.__practice={S:S,api:{}};
@@ -418,6 +438,7 @@ function syncSheet(name){
     $('speedVal').textContent=Math.round(speedFactor()*100)+'%';
     syncPresets('speedPresets','s',Math.round(speedFactor()*100));
     updateBpm();
+    updateTransposeUI();
     hud(S.playing?Tone.Transport.ticks/tppq():S.seekQ,true);
   } else if(name==='mix'){
     renderTracks();
@@ -640,7 +661,9 @@ function scheduleAll(){
         S.fired++;
         var inst=AU.inst[ti];
         if(!inst) return;
-        try{ inst.trigger(n.midi,durQ*secPerQ(),time,clamp(n.velocity||0.8,0.05,1)); }catch(e){}
+        /* 소리도 악보와 같은 반음만큼 이조 · 드럼·퍼커션 트랙은 원래 음 */
+        var m=clamp(Math.round(n.midi+semisForTrack(ti)),0,127);
+        try{ inst.trigger(m,durQ*secPerQ(),time,clamp(n.velocity||0.8,0.05,1)); }catch(e){}
       },String(at)+'i');
     });
   });
@@ -747,13 +770,24 @@ function ensureOsmd(){
     cursorsOptions:[{type:1,color:'#1667d6',alpha:0.55,follow:false}]
   });
   try{ S.osmd.FollowCursor=false; }catch(e){}
+  try{ ensureTransposeCalc(); }catch(e){}
+}
+function ensureTransposeCalc(){
+  if(!S.osmd) return false;
+  if(S.osmd.TransposeCalculator) return true;
+  var TC=null;
+  try{ TC=window.opensheetmusicdisplay&&opensheetmusicdisplay.TransposeCalculator; }catch(e){}
+  if(!TC) return false;
+  try{ S.osmd.TransposeCalculator=new TC(); return !!S.osmd.TransposeCalculator; }catch(e){ return false; }
 }
 async function loadXmlText(text,name){
   ensureOsmd();
   status('악보 불러오는 중…');
   await S.osmd.load(text);
   S.sheet=S.osmd.Sheet;
+  S.percParts=percussionPartsFromXml(text);
   S.scoreName=name||'';
+  resetTranspose();
   var names=partNamesFromXml(text);
   S.parts=names.map(function(n,i){return {name:n||('파트 '+(i+1)),index:i};});
   var tx=tempoFromXml(text);
@@ -783,6 +817,7 @@ async function loadMidiBuffer(buf,name){
   S.ppq=midi.header.ppq||480;
   S.midiName=name||'';
   S.midiTracks=midi.tracks.filter(function(t){ return t.notes&&t.notes.length>0; });
+  resetTranspose();
   var endTicks=midi.header.durationTicks||0;
   if(!endTicks){
     S.midiTracks.forEach(function(t){ t.notes.forEach(function(n){ endTicks=Math.max(endTicks,n.ticks+n.durationTicks); }); });
@@ -1306,6 +1341,96 @@ $('speedPresets').addEventListener('click',function(ev){
   setSpeed(Number(b.getAttribute('data-s')));
 });
 
+/* ---- 조변경 (이조) ---- */
+/* MusicXML의 score-part / part 단위로 타악기 파트를 찾아 둔다 (악보 이조 제외용) */
+function percussionPartsFromXml(text){
+  var out=[];
+  if(!text) return out;
+  var map={}, m;
+  var re=/<score-part\b[^>]*\bid\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/score-part>/gi;
+  while((m=re.exec(text))){
+    var body=m[2]||'';
+    map[m[1]]= /<midi-channel>\s*10\s*<\/midi-channel>/i.test(body) ||
+      /<instrument-name>[^<]*(drum|perc|드럼|퍼커션|타악)/i.test(body) ||
+      /<part-name>[^<]*(drum|perc|드럼|퍼커션|타악)/i.test(body);
+  }
+  var re2=/<part\b[^>]*\bid\s*=\s*["']([^"']+)["']/gi;
+  while((m=re2.exec(text))){
+    var head=text.slice(re2.lastIndex,re2.lastIndex+4000);
+    out.push(!!map[m[1]] || /<sign>\s*percussion\s*<\/sign>/i.test(head));
+  }
+  return out;
+}
+function isPercIns(i){
+  if(S.percParts&&S.percParts[i]) return true;
+  var ins=null;
+  try{ ins=S.sheet&&S.sheet.Instruments?S.sheet.Instruments[i]:null; }catch(e){}
+  if(!ins) return false;
+  try{ if(ins.MidiInstrumentId===128) return true; }catch(e){}   /* MidiInstrument.Percussion */
+  return /(drum|perc|드럼|퍼커션|타악)/.test(String(ins.Name||'').toLowerCase());
+}
+function isPercTrack(i){
+  var t=S.midiTracks[i], st=S.trackState[i];
+  if((st&&st.channel===9)||(t&&t.channel===9)) return true;
+  var ins=t&&t.instrument;
+  if(ins){ try{ if(ins.percussion===true) return true; }catch(e){} }
+  return /(drum|perc|드럼|퍼커션|타악)/.test(String((st&&st.name)||(t&&t.name)||'').toLowerCase());
+}
+function semisForTrack(i){ return isPercTrack(i)?0:(S.transpose||0); }
+function transposeLabelHtml(v){
+  if(!v) return '0 <span class="u">(원키)</span>';
+  return (v>0?'+'+v:String(v))+'<span class="u">키</span>';
+}
+function updateTransposeUI(){
+  var v=S.transpose||0;
+  var el=$('trVal');
+  if(el){ el.innerHTML=transposeLabelHtml(v); el.classList.toggle('on',!!v); }
+  var b=$('transBadge');
+  if(b){ if(v){ b.hidden=false; b.textContent=(v>0?'+'+v:String(v))+'키'; } else { b.hidden=true; b.textContent=''; } }
+  var dn=$('trDown'); if(dn) dn.disabled=(v<=-12);
+  var up=$('trUp'); if(up) up.disabled=(v>=12);
+}
+function resetTranspose(){
+  S.transpose=0;
+  updateTransposeUI();
+}
+/* 악보: Sheet.Transpose(전체) + 파트별 Transpose(타악기는 반대로 상쇄) → updateGraphic → 재렌더 */
+function applyScoreTranspose(){
+  if(!S.osmd||!S.sheet) return;
+  if(!ensureTransposeCalc()){ status('이조 도구를 불러오지 못했어'); return; }
+  var T=S.transpose||0;
+  try{
+    S.sheet.Transpose=T;
+    var ins=[]; try{ ins=S.sheet.Instruments||[]; }catch(e){ ins=[]; }
+    for(var i=0;i<ins.length;i++){
+      try{ ins[i].Transpose=isPercIns(i)? -T : 0; }catch(e){}
+    }
+    S.osmd.updateGraphic();
+  }catch(e){ status('조변경 오류: '+e.message); return; }
+  renderScore();
+  var q=S.seekQ||0;
+  try{ if(S.playing) q=Tone.Transport.ticks/tppq(); }catch(e){}
+  hud(q,true);
+}
+function setTranspose(v,opts){
+  opts=opts||{};
+  var prev=S.transpose||0;
+  v=clamp(Math.round(Number(v)||0),-12,12);
+  S.transpose=v;
+  updateTransposeUI();
+  if(v===prev) return;
+  if(!opts.noRender&&S.sheet) applyScoreTranspose();
+  if(!opts.silent){
+    status(v===0?'원키로 돌아왔어 · 악보·소리 원래대로':(v>0?'+'+v:String(v))+'키로 조변경 · 드럼은 그대로');
+  }
+}
+$('trDown').addEventListener('click',function(){ setTranspose((S.transpose||0)-1); });
+$('trUp').addEventListener('click',function(){ setTranspose((S.transpose||0)+1); });
+$('trReset').addEventListener('click',function(){
+  if(!(S.transpose||0)){ status('지금은 원키야'); return; }
+  setTranspose(0);
+});
+
 /* ---- 반복 · A/B 마디 ---- */
 $('loop').addEventListener('change',function(){
   applyLoopPoints();
@@ -1485,6 +1610,8 @@ window.__practice.api={
   openSheet:openSheet, closeSheet:closeSheet, openPicker:openPicker, closePicker:closePicker,
   pickOnly:pickOnly, pickAll:pickAll, applyVisibility:applyVisibility, setZoom:setZoom,
   setSpeed:setSpeed, stepMeasure:stepMeasure, renderTracks:renderTracks,
+  setTranspose:setTranspose, updateTransposeUI:updateTransposeUI, isPercIns:isPercIns, isPercTrack:isPercTrack,
+  semisForTrack:semisForTrack, percussionPartsFromXml:percussionPartsFromXml,
   state:S, measureStartQ:measureStartQ, measureIndexAtQ:measureIndexAtQ, totalQ:totalQ
 };
 loadSample();
