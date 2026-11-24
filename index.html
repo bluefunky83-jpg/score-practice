@@ -406,7 +406,7 @@ try{
 var S={
   osmd:null, sheet:null, midi:null,
   midiTracks:[], trackState:[], parts:[],
-  measures:[], sampleMidiOrder:null, xmlTotalQ:0, midiTotalQ:0, ppq:480, tempo:100, xmlTempo:0,
+  partVis:[], measures:[], sampleMidiOrder:null, xmlTotalQ:0, midiTotalQ:0, ppq:480, tempo:100, xmlTempo:0,
   playing:false, seekQ:0, currentMeasure:0, view:'line', viewScale:1,
   lineSystems:[], sysIndex:null, boxes:[], zoom:1,
   audioBuilt:false, hudAt:0, fired:0, errors:ERR, ready:false,
@@ -485,19 +485,10 @@ function syncPresets(box,attr,val){
   Array.prototype.forEach.call(el.children,function(b){ b.classList.toggle('on',Number(b.getAttribute('data'+attr))===val); });
 }
 
-function visOf(i){
-  if(S.trackState[i]) return S.trackState[i].visible!==false;
-  if(S.partVis) return S.partVis[i]!==false;
-  return true;
-}
-function setVis(i,v){
-  if(S.trackState[i]) S.trackState[i].visible=!!v;
-  else { if(!S.partVis) S.partVis=[]; S.partVis[i]=!!v; }
-}
+function visOf(i){ return S.partVis[i]!==false; }
+function setVis(i,v){ S.partVis[i]=!!v; }
 function pickerItems(){
-  if(S.trackState.length) return S.trackState.map(function(t,i){ return {i:i,name:t.name}; });
-  if(S.parts.length) return S.parts.map(function(p,i){ return {i:i,name:p.name}; });
-  return [];
+  return S.parts.map(function(p,i){ return {i:i,name:p.name}; });
 }
 function visCount(){ var n=0; pickerItems().forEach(function(it){ if(visOf(it.i)) n++; }); return n; }
 function pickLabelText(){
@@ -1046,7 +1037,6 @@ function matchNote(){
 }
 function resetVisibility(){
   S.partVis=[];
-  S.trackState.forEach(function(t){ t.visible=true; });
 }
 function loadMeasures(){
   var sm=S.sheet&&S.sheet.SourceMeasures;
@@ -1070,6 +1060,13 @@ function applyLoopDefaults(){
   if((parseInt($('startBar').value,10)||1)>n) $('startBar').value='1';
   applyLoopPoints();
 }
+function midiTrackName(track,i){
+  var name=String(track.name||'');
+  if(name&&/^[\x00-\xff]+$/.test(name)){
+    try{ name=new TextDecoder('utf-8',{fatal:true}).decode(Uint8Array.from(name,function(c){return c.charCodeAt(0);})); }catch(e){}
+  }
+  return name.trim()||('트랙 '+(i+1));
+}
 function initTracks(){
   var names=null;
   if(S.parts.length&&S.parts.length===S.midiTracks.length) names=S.parts.map(function(p){return p.name;});
@@ -1077,9 +1074,9 @@ function initTracks(){
   S.trackState=S.midiTracks.map(function(t,i){
     var old=prev[i];
     return {
-      name:names?names[i]:(String(t.name||'').trim()||('파트 '+(i+1))),
+      name:names?names[i]:midiTrackName(t,i),
       mute:old?old.mute:false, solo:old?old.solo:false,
-      visible:old?old.visible:((S.partVis&&S.partVis[i]!==undefined)?S.partVis[i]!==false:true), vol:old?old.vol:80,
+      vol:old?old.vol:80,
       channel:t.channel
     };
   });
@@ -1099,18 +1096,20 @@ function renderTracks(){
   var scr=$('tracksScreen');
   if(scr){
     scr.innerHTML='';
-    if(!S.trackState.length){
+    if(!items.length){
       var p=document.createElement('p'); p.className='note';
-      p.textContent=S.sheet?'MIDI를 함께 불러오면 음소거·솔로·음량까지 조절할 수 있어요.':'먼저 악보나 MIDI를 불러와 주세요.';
+      p.textContent=S.trackState.length?'MIDI 조절은 믹서에서 할 수 있어요.':'먼저 악보를 불러와 주세요.';
       scr.appendChild(p);
     } else {
-      S.trackState.forEach(function(t,i){
+      items.forEach(function(item){
+        var i=item.i, visible=visOf(i);
+        var t=items.length===S.trackState.length?S.trackState[i]:null;
         var row=document.createElement('div'); row.className='srow'; row.setAttribute('data-i',String(i));
-        row.innerHTML='<div class="tname">'+esc(t.name)+'</div>'+
+        row.innerHTML='<div class="tname">'+esc(item.name)+'</div>'+
           '<div class="tbtns">'+
-          '<button class="tbtn eye'+(t.visible?'':' off')+'" type="button" data-a="eye" title="악보 표시" aria-label="악보 표시">'+EYE_SVG(t.visible)+'</button>'+
-          '<button class="tbtn m'+(t.mute?' on':'')+'" type="button" data-a="mute" title="음소거">M</button>'+
-          '<button class="tbtn s'+(t.solo?' on':'')+'" type="button" data-a="solo" title="솔로">S</button>'+
+          '<button class="tbtn eye'+(visible?'':' off')+'" type="button" data-a="eye" title="악보 표시" aria-label="악보 표시">'+EYE_SVG(visible)+'</button>'+
+          (t?'<button class="tbtn m'+(t.mute?' on':'')+'" type="button" data-a="mute" title="음소거">M</button>'+
+          '<button class="tbtn s'+(t.solo?' on':'')+'" type="button" data-a="solo" title="솔로">S</button>':'')+
           '</div>';
         scr.appendChild(row);
       });
@@ -1179,9 +1178,9 @@ function buildGeometry(){
   var sysMap=new Map();
   list.forEach(function(staves,mi){
     var box=null, sys=null;
-    (staves||[]).forEach(function(gm,si){
+    (staves||[]).forEach(function(gm){
       if(!gm||!gm.PositionAndShape) return;
-      if(!visOf(si)) return;   /* 화면에 그리지 않는 악기는 상자·줄 계산에서 제외 */
+      if(gm.ParentStaff&&gm.ParentStaff.ParentInstrument.Visible===false) return;
       var ps=gm.PositionAndShape;
       var b={x:ps.AbsolutePosition.x*10*z,y:ps.AbsolutePosition.y*10*z,w:ps.Size.width*10*z,h:ps.Size.height*10*z};
       if(!b.w||!b.h) return;
@@ -1755,11 +1754,15 @@ function onTrackClick(ev){
   if(!b) return;
   var row=b.closest('.srow')||b.closest('.mixrow'); if(!row) return;
   var i=Number(row.getAttribute('data-i')), a=b.getAttribute('data-a'), t=S.trackState[i];
+  if(a==='eye'){
+    setVis(i,!visOf(i));
+    applyVisibility();
+    return;
+  }
   if(!t) return;
   if(a==='mute') t.mute=!t.mute;
   else if(a==='solo') t.solo=!t.solo;
-  else if(a==='eye') t.visible=!t.visible;
-  if(a==='eye') applyVisibility(); else renderTracks();
+  renderTracks();
 }
 function onTrackInput(ev){
   var inp=ev.target;
