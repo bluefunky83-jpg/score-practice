@@ -1213,9 +1213,9 @@ function buildGeometry(){
     var previous=systems[idx-1], next=systems[idx+1];
     var topLimit=previous ? (previous.y+previous.h+s4.y)/2 : 0;
     var end=s4.y+s4.h;
-    var bottomLimit=next ? (end+next.y)/2 : end+36;
+    var bottomLimit=next ? (end+next.y)/2 : end+8;
     var top=Math.min(s4.y,Math.max(topLimit,s4.y-72));
-    var bottom=Math.max(end,Math.min(bottomLimit,end+36));
+    var bottom=Math.max(end,Math.min(bottomLimit,end+8));
     // Use the original staff bounds for neighboring systems.
     s4.clipTop=top;
     s4.clipBottom=bottom;
