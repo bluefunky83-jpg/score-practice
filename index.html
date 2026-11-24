@@ -1208,7 +1208,17 @@ function buildGeometry(){
     }catch(e){}
   });
   S.lineSystems=Array.from(sysMap.values()).sort(function(a,b){ return a.y-b.y; });
-  S.lineSystems.forEach(function(s4,idx){
+  S.lineSystems.forEach(function(s4,idx,systems){
+    // The staff bounds omit notes and symbols above or below the outer staves.
+    var previous=systems[idx-1], next=systems[idx+1];
+    var topLimit=previous ? (previous.y+previous.h+s4.y)/2 : 0;
+    var end=s4.y+s4.h;
+    var bottomLimit=next ? (end+next.y)/2 : end+36;
+    var top=Math.min(s4.y,Math.max(topLimit,s4.y-72));
+    var bottom=Math.max(end,Math.min(bottomLimit,end+36));
+    // Use the original staff bounds for neighboring systems.
+    s4.clipTop=top;
+    s4.clipBottom=bottom;
     s4.idx=idx;
     s4.measures.forEach(function(mi){ S.sysIndex.set(mi,idx); });
   });
@@ -1306,12 +1316,13 @@ function applyView(align){
     var sys=currentSystem();
     if(!sys){ stage.style.transform='none'; return; }
     var availW=Math.max(60,vw-pad*2), availH=Math.max(60,vh-pad*2);
-    var base=Math.min(availW/sys.w,availH/sys.h);
+    var lineHeight=sys.clipBottom-sys.clipTop;
+    var base=Math.min(availW/sys.w,availH/lineHeight);
     if(!isFinite(base)||base<=0) base=1;
     sc=Math.min(base*zoom,4);
-    var cw=sys.w*sc, chh=sys.h*sc;
+    var cw=sys.w*sc, chh=lineHeight*sc;
     tx=(cw<=availW)?(pad+(availW-cw)/2-sys.x*sc):(pad-sys.x*sc);
-    ty=(chh<=availH)?(pad+(availH-chh)/2-sys.y*sc):(pad-sys.y*sc);
+    ty=(chh<=availH)?(pad+(availH-chh)/2-sys.clipTop*sc):(pad-sys.clipTop*sc);
     sw=Math.max(cw+pad*2,vw);
     sh=Math.max(chh+pad*2,vh);
   }else{
@@ -1325,8 +1336,8 @@ function applyView(align){
   /* 한 줄 보기: 현재 시스템만 남기고 곡 제목·다른 줄은 잘라낸다 */
   try{
     if(S.view==='line'&&sys){
-      var ct=Math.max(0,sys.y), cl=Math.max(0,sys.x);
-      var cr=Math.max(0,nw-(sys.x+sys.w)), cb=Math.max(0,nh-(sys.y+sys.h));
+      var ct=Math.max(0,sys.clipTop), cl=Math.max(0,sys.x);
+      var cr=Math.max(0,nw-(sys.x+sys.w)), cb=Math.max(0,nh-sys.clipBottom);
       inner.style.clipPath='inset('+ct.toFixed(1)+'px '+cr.toFixed(1)+'px '+cb.toFixed(1)+'px '+cl.toFixed(1)+'px)';
     } else {
       inner.style.clipPath='none';
