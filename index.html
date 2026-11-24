@@ -1356,8 +1356,10 @@ function percussionPartsFromXml(text){
   }
   var re2=/<part\b[^>]*\bid\s*=\s*["']([^"']+)["']/gi;
   while((m=re2.exec(text))){
-    var head=text.slice(re2.lastIndex,re2.lastIndex+4000);
-    out.push(!!map[m[1]] || /<sign>\s*percussion\s*<\/sign>/i.test(head));
+    var start=re2.lastIndex;
+    var end=text.indexOf('</part>',start);
+    var body=text.slice(start,end>start?end:start+20000);
+    out.push(!!map[m[1]] || /<sign>\s*percussion\s*<\/sign>/i.test(body));
   }
   return out;
 }
