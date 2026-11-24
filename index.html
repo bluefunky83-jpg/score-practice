@@ -78,7 +78,10 @@ main{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:co
 .xbtn{margin-left:auto;width:36px;height:36px;border:0;background:transparent;color:#8ea7c2;font-size:14px;cursor:pointer;display:grid;place-items:center;border-radius:10px}
 .xbtn:active{background:#1b2f47;color:#fff}
 .sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none;padding:12px 12px 18px;display:flex;flex-direction:column;gap:11px;flex:1 1 auto;min-height:0}
-.sheet-foot{flex:0 0 auto;padding:10px 12px calc(10px + var(--safe-b));border-top:1px solid var(--line-soft);background:linear-gradient(180deg,rgba(12,26,43,.4),rgba(12,26,43,.95))}
+.sheet-foot{flex:0 0 auto;display:flex;align-items:stretch;gap:8px;padding:10px 12px calc(10px + var(--safe-b));border-top:1px solid var(--line-soft);background:linear-gradient(180deg,rgba(12,26,43,.4),rgba(12,26,43,.95))}
+.sheet-foot .btn-reset{flex:0 0 35%;background:#152740;border-color:#274059;color:#b9d2ec;box-shadow:none}
+.sheet-foot .btn-reset:active{background:#1d3653;color:#fff}
+.sheet-foot .btn-primary{flex:1 1 auto;min-width:0}
 
 /* 카드형 블록 */
 .block{background:var(--panel3);border:1px solid #19304a;border-radius:var(--r-lg);padding:12px;display:flex;flex-direction:column;gap:10px}
@@ -93,6 +96,13 @@ main{flex:1 1 auto;min-height:0;position:relative;display:flex;flex-direction:co
 .btn-block{width:100%}
 .file-row{display:flex;flex-direction:column;gap:8px}
 .filebtn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:0;cursor:pointer}
+.audio-info{display:flex;align-items:center;gap:8px;background:#091625;border:1px solid #1e3449;border-radius:10px;padding:7px 8px 7px 10px;min-width:0}
+.audio-info .aname{flex:1 1 auto;min-width:0;font-size:11.5px;font-weight:700;color:#dceafb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.1px}
+.audio-info .adur{flex:0 0 auto;font-size:10.5px;font-weight:700;color:#9dc2e6;font-variant-numeric:tabular-nums}
+.audio-info .ax{flex:0 0 auto;width:26px;height:26px;border-radius:8px;border:1px solid #274059;background:#152740;color:#b9d2ec;font-size:11px;line-height:1;display:grid;place-items:center;cursor:pointer;padding:0}
+.audio-info .ax:active{background:#1e3651;color:#fff}
+.syncrow{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#dceafb;border-top:1px solid #23394f;margin-top:2px;padding-top:10px}
+.syncrow .syncval{flex:1 1 auto;min-width:0;text-align:center;font-size:12.5px;font-weight:800;color:#f2f7fd;font-variant-numeric:tabular-nums;letter-spacing:-.2px}
 .seg{display:flex;background:#091625;border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
 .seg button{flex:1 1 0;border:0;background:transparent;color:#93aecb;padding:9px 6px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;letter-spacing:-.2px;transition:background .15s,color .15s}
 .seg button.on{background:linear-gradient(180deg,var(--accent-hi),var(--accent-deep));color:#fff;box-shadow:0 2px 8px rgba(31,108,184,.45)}
@@ -266,12 +276,18 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:2px solid var(
         <div class="file-row">
           <label class="btn filebtn">악보 열기 (.xml · .musicxml · .mxl)<input id="xmlFile" type="file" accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml+xml,application/xml"></label>
           <label class="btn filebtn">MIDI 열기 (.mid · .midi)<input id="midiFile" type="file" accept=".mid,.midi,audio/midi"></label>
+          <label class="btn filebtn">원곡 오디오 열기 (.mp3 · .wav · .m4a)<input id="audioFile" type="file" accept=".mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/mp4"></label>
           <button id="sample" class="btn" type="button">샘플 불러오기</button>
+        </div>
+        <div id="audioInfo" class="audio-info" hidden>
+          <span id="audioName" class="aname">원곡</span>
+          <span id="audioDur" class="adur">0:00</span>
+          <button id="audioRemove" class="ax" type="button" aria-label="원곡 오디오 제거">✕</button>
         </div>
         <p class="note" id="fileInfo">불러온 파일 없음</p>
       </div>
     </div>
-    <div class="sheet-foot"><button class="btn btn-primary btn-block" type="button" data-close="screen">완료</button></div>
+    <div class="sheet-foot"><button class="btn btn-reset" type="button" data-reset="screen">초기화</button><button class="btn btn-primary" type="button" data-close="screen">완료</button></div>
   </section>
 </div>
 
@@ -318,8 +334,19 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:2px solid var(
         </div>
         <p class="note">악보를 눌러 그 마디로 이동하고, 반복은 A~B 마디 사이만 돌아요.</p>
       </div>
+      <div class="block">
+        <div class="row"><span class="row-label">악보 따라가기</span><label class="switch"><input id="follow" type="checkbox" checked aria-label="악보 따라가기 (하이라이트)"><span class="knob"></span></label></div>
+        <p class="note">끄면 재생 중에도 마디 강조·자동 스크롤 없이 악보를 손으로 넘겨 볼 수 있어요.</p>
+        <div class="syncrow" id="syncRow" hidden>
+          <span class="row-label">시작 싱크</span>
+          <button id="syncMinus" class="mini" type="button" aria-label="시작 싱크 0.5초 당기기">−0.5s</button>
+          <span id="syncVal" class="syncval">0.0초</span>
+          <button id="syncPlus" class="mini" type="button" aria-label="시작 싱크 0.5초 미루기">+0.5s</button>
+        </div>
+        <p class="note" id="syncHint" hidden>원곡 앞부분이 악보보다 늦게 시작하면 +, 먼저 시작하면 −로 맞춰 주세요.</p>
+      </div>
     </div>
-    <div class="sheet-foot"><button class="btn btn-primary btn-block" type="button" data-close="opt">완료</button></div>
+    <div class="sheet-foot"><button class="btn btn-reset" type="button" data-reset="opt">초기화</button><button class="btn btn-primary" type="button" data-close="opt">완료</button></div>
   </section>
 </div>
 
@@ -334,13 +361,18 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border:2px solid var(
         <div class="mixhead"><span class="tname">마스터</span><span class="val" id="masterVal">100</span></div>
         <input id="master" type="range" min="0" max="100" step="1" value="100" aria-label="마스터 음량">
       </div>
+      <div class="block" id="mixAudioBlock" hidden>
+        <div class="mixhead"><span class="tname">원곡 오디오</span><span class="val" id="audioVolVal">100</span><button id="audioMuteBtn" class="tbtn m" type="button" aria-label="원곡 오디오 음소거">M</button></div>
+        <input id="audioVol" type="range" min="0" max="100" step="1" value="100" aria-label="원곡 오디오 음량">
+        <p class="note">원곡을 열면 MIDI 소리는 자동으로 꺼져요 · 여기서 원곡 음량·음소거를 조절해요.</p>
+      </div>
       <div class="block">
         <div class="block-title">악기별 음량 <span class="side" id="trackCount" style="color:#93a9c4;font-weight:600"></span></div>
         <div id="tracksMix" class="tracks"></div>
         <p class="note">M 음소거 · S 솔로 · 슬라이더로 악기별 음량 조절</p>
       </div>
     </div>
-    <div class="sheet-foot"><button class="btn btn-primary btn-block" type="button" data-close="mix">완료</button></div>
+    <div class="sheet-foot"><button class="btn btn-reset" type="button" data-reset="mix">초기화</button><button class="btn btn-primary" type="button" data-close="mix">완료</button></div>
   </section>
 </div>
 
@@ -379,7 +411,8 @@ var S={
   lineSystems:[], sysIndex:null, boxes:[], zoom:1,
   audioBuilt:false, hudAt:0, fired:0, errors:ERR, ready:false,
   scoreName:'', midiName:'', masterVol:100, lastStatus:'', pickTimer:0, renderTimer:0,
-  transpose:0, percParts:[]
+  transpose:0, percParts:[],
+  audioEl:null, audioUrl:'', audioName:'', audioSync:0, audioVol:100, audioMute:false, follow:true
 };
 S.sysIndex=new Map();
 window.__practice={S:S,api:{}};
@@ -439,9 +472,11 @@ function syncSheet(name){
     syncPresets('speedPresets','s',Math.round(speedFactor()*100));
     updateBpm();
     updateTransposeUI();
+    refreshAudioUI();
     hud(S.playing?Tone.Transport.ticks/tppq():S.seekQ,true);
   } else if(name==='mix'){
     renderTracks();
+    refreshAudioUI();
     var mv=$('masterVal'); if(mv) mv.textContent=String(S.masterVol);
   }
 }
@@ -530,7 +565,7 @@ function schedulePicker(){
 }
 function updateFileInfo(){
   var el=$('fileInfo'); if(!el) return;
-  el.textContent=(S.scoreName?'악보: '+S.scoreName:'악보 없음')+' · '+(S.midiName?'MIDI: '+S.midiName:'MIDI 없음');
+  el.textContent=(S.scoreName?'악보: '+S.scoreName:'악보 없음')+' · '+(S.midiName?'MIDI: '+S.midiName:'MIDI 없음')+(S.audioEl?' · 원곡: '+S.audioName:'');
 }
 function updateBpm(){
   var v=Math.round(S.tempo*speedFactor());
@@ -539,6 +574,103 @@ function updateBpm(){
 }
 function applyMaster(){
   try{ if(window.Tone) Tone.Destination.volume.value=dbFor(S.masterVol); }catch(e){}
+  applyAudioGain();
+}
+
+/* ---------- 원곡 오디오 (mp3/wav/m4a) ---------- */
+function audioDur(){
+  var a=S.audioEl;
+  if(!a) return 0;
+  var d=a.duration;
+  return (typeof d==='number'&&isFinite(d)&&d>0)?d:0;
+}
+function audioSpan(){ return Math.max(0.05, audioDur()-(S.audioSync||0)); }
+/* 원곡 시간 → 악보 위치(4분음표 단위). 시작 싱크만큼 앞을 잘라 곡 전체 길이에 비례해 맞춘다 */
+function qFromAudio(t){
+  var d=audioDur(), Q=totalQ()||0;
+  if(!d||!Q) return 0;
+  return clamp(((t-(S.audioSync||0))/audioSpan())*Q,0,Q);
+}
+function audioTimeForQ(q){
+  var d=audioDur(),Q=totalQ()||0;
+  if(!d) return 0;
+  var p=Q>0?clamp(q/Q,0,1):0;
+  return clamp((S.audioSync||0)+p*audioSpan(),0,d);
+}
+function audioGain(){
+  if(!S.audioEl) return 0;
+  if(S.audioMute) return 0;
+  return clamp((S.audioVol/100)*(S.masterVol/100),0,1);
+}
+function applyAudioGain(){
+  var a=S.audioEl; if(!a) return;
+  try{ a.muted=!!S.audioMute; a.volume=audioGain(); }catch(e){}
+}
+function refreshAudioUI(){
+  var on=!!S.audioEl;
+  var info=$('audioInfo'); if(info) info.hidden=!on;
+  var nm=$('audioName'); if(nm) nm.textContent=S.audioName||'원곡';
+  var du=$('audioDur'); if(du) du.textContent=on?fmt(audioDur()):'0:00';
+  var mb=$('mixAudioBlock'); if(mb) mb.hidden=!on;
+  var av=$('audioVol'); if(av) av.value=String(S.audioVol);
+  var avv=$('audioVolVal'); if(avv) avv.textContent=String(S.audioVol);
+  var amb=$('audioMuteBtn'); if(amb){ amb.classList.toggle('on',!!S.audioMute); amb.disabled=!on; }
+  var sr=$('syncRow'); if(sr) sr.hidden=!on;
+  var sh=$('syncHint'); if(sh) sh.hidden=!on;
+  var sv=$('syncVal'); if(sv) sv.textContent=(S.audioSync>0?'+':'')+(Math.round((S.audioSync||0)*10)/10).toFixed(1)+'초';
+  applyAudioGain();
+  updateFileInfo();
+}
+function setAudioSync(v){
+  S.audioSync=clamp(Math.round(Number(v||0)*10)/10,-10,10);
+  refreshAudioUI();
+  if(S.audioEl){
+    var a=S.audioEl;
+    var q=S.playing?qFromAudio(a.currentTime):(S.seekQ||0);
+    if(!S.playing){ try{ a.currentTime=audioTimeForQ(q); }catch(e){} }
+    if(S.follow){ jumpCursorToMeasure(S.currentMeasure); refineCursor(q); placeHighlight(S.currentMeasure); }
+    hud(q,true);
+  }
+}
+function removeAudioFile(silent){
+  var a=S.audioEl;
+  if(a){
+    try{ a.pause(); }catch(e){}
+    try{ a.removeAttribute('src'); a.load(); }catch(e){}
+  }
+  if(S.audioUrl){ try{ URL.revokeObjectURL(S.audioUrl); }catch(e){} }
+  S.audioEl=null; S.audioUrl=''; S.audioName='';
+  S.audioSync=0; S.audioVol=100; S.audioMute=false;
+  if(S.playing){ S.playing=false; setPlayIcon(false); }
+  refreshAudioUI();
+  hud(S.seekQ||0,true);
+  if(!silent) status('원곡 오디오를 뺐어 · MIDI 소리로 돌아왔어');
+}
+function loadAudioFile(file){
+  if(!file) return false;
+  if(!/\.(mp3|wav|m4a)$/i.test(file.name)){ status('오디오는 .mp3 · .wav · .m4a 파일만 열 수 있어'); return false; }
+  if(S.playing){ try{ pausePlay(); }catch(e){} }
+  removeAudioFile(true);
+  var url=URL.createObjectURL(file);
+  var a=new Audio();
+  a.preload='auto';
+  a.src=url;
+  S.audioEl=a; S.audioUrl=url; S.audioName=file.name;
+  S.audioSync=0; S.audioVol=100; S.audioMute=false;
+  try{ a.preservesPitch=true; }catch(e){}
+  a.addEventListener('loadedmetadata',function(){ refreshAudioUI(); hud(S.seekQ||0,true); });
+  a.addEventListener('error',function(){ status('오디오를 재생할 수 없어 (파일 형식 확인)'); });
+  a.addEventListener('ended',function(){
+    if(!S.playing) return;
+    if($('loop').checked){
+      try{ a.currentTime=audioTimeForQ(loopAQ()); a.play(); return; }catch(e){}
+    }
+    stopPlay();
+  });
+  refreshAudioUI();
+  try{ a.load(); }catch(e){}
+  status('원곡 준비 · '+(file.name||'')+' · 재생하면 MIDI는 자동으로 꺼져');
+  return true;
 }
 
 /* ---------- 오디오 ---------- */
@@ -598,6 +730,7 @@ function buildAudio(){
 }
 function soloOn(){ return S.trackState.some(function(t){return t.solo;}); }
 function audible(i){
+  if(S.audioEl) return false;          /* 원곡 오디오가 켜지면 MIDI·신스는 자동 음소거 */
   var t=S.trackState[i]; if(!t) return false;
   if(t.mute) return false;
   return soloOn()? !!t.solo : true;
@@ -683,11 +816,40 @@ function configureTransport(){
 function setPlayIcon(on){ $('play').textContent=on?'❚❚':'▶'; $('play').setAttribute('aria-label',on?'일시정지':'재생'); }
 
 async function togglePlay(){
-  if(!S.midi){ status('MIDI 파일을 함께 불러와 주세요'); return; }
+  if(!S.midi&&!S.audioEl){ status('악보·MIDI나 원곡 오디오를 먼저 불러와 주세요'); return; }
   try{ await Tone.start(); }catch(e){}
+  if(S.audioEl){
+    if(S.playing){ pausePlay(); return; }
+    startPlayAudio();
+    return;
+  }
   if(!S.audioBuilt) buildAudio();
   if(S.playing){ pausePlay(); return; }
   startPlay();
+}
+/* 원곡 오디오 재생: MIDI Transport는 멈춰 두고 오디오만 진행한다 */
+function startPlayAudio(){
+  var a=S.audioEl; if(!a) return;
+  if(!audioDur()){ status('원곡을 준비하는 중이야 · 잠시 후 다시 눌러 줘'); return; }
+  var q=S.seekQ||0;
+  if($('loop').checked){
+    var la=loopAQ(), lb=loopBQ();
+    if(q<la-0.01||q>=lb-0.01) q=la;
+  }
+  if(q>=totalQ()-0.01) q=$('loop').checked?loopAQ():0;
+  try{ Tone.Transport.stop(); }catch(e){}
+  S.audioBuilt=false;
+  try{ a.currentTime=audioTimeForQ(q); }catch(e){}
+  try{ a.playbackRate=clamp(speedFactor(),0.5,2); }catch(e){}
+  applyAudioGain();
+  var pr=null;
+  try{ pr=a.play(); }catch(e){}
+  if(pr&&pr.catch) pr.catch(function(){ status('브라우저가 소리를 막았어 · 재생 버튼을 한 번 더 눌러 줘'); });
+  S.playing=true; setPlayIcon(true);
+  S.currentMeasure=measureIndexAtQ(q);
+  if(S.follow){ jumpCursorToMeasure(S.currentMeasure); applyView(true); }
+  hudAudio(a.currentTime,true);
+  ensureFrame();
 }
 function startPlay(){
   var q=S.seekQ;
@@ -704,6 +866,14 @@ function startPlay(){
   ensureFrame();
 }
 function pausePlay(){
+  if(S.audioEl){
+    var a=S.audioEl;
+    S.seekQ=qFromAudio(a.currentTime);
+    try{ a.pause(); }catch(e){}
+    S.playing=false; setPlayIcon(false);
+    hudAudio(a.currentTime,true);
+    return;
+  }
   S.seekQ=clamp(Tone.Transport.ticks/tppq(),0,totalQ());
   try{ Tone.Transport.pause(); }catch(e){}
   S.playing=false; setPlayIcon(false);
@@ -711,6 +881,14 @@ function pausePlay(){
   hud(S.seekQ,true);
 }
 function stopPlay(){
+  if(S.audioEl){
+    var a=S.audioEl;
+    S.playing=false; setPlayIcon(false);
+    try{ a.pause(); }catch(e){}
+    var qa=$('loop').checked?loopAQ():measureStartQ(Math.max(0,(parseInt($('startBar').value,10)||1)-1));
+    seekTo(qa,true);
+    return;
+  }
   S.playing=false; setPlayIcon(false);
   try{ Tone.Transport.stop(); }catch(e){}
   releaseAll();
@@ -1092,6 +1270,7 @@ function measureRect(mi){
 }
 function placeHighlight(mi){
   var hl=$('measureHl');
+  if(!S.follow){ hl.style.opacity='0'; return; }   /* 따라가기 OFF면 마디 강조도 끔 */
   var b=measureRect(mi);
   if(!b){ hl.style.opacity='0'; return; }
   hl.style.opacity='1';
@@ -1146,7 +1325,7 @@ function applyView(align){
   /* 넘칠 때만 스크롤. 딱 맞으면 이전 스크롤 값을 0으로 되돌린다 */
   if(sw<=vw+2) vp.scrollLeft=0;
   if(sh<=vh+2) vp.scrollTop=0;
-  followCursor(!!align);
+  followCursor(!!align && S.follow!==false);
 }
 function followCursor(force){
   var c=S.osmd&&S.osmd.cursor?S.osmd.cursor.cursorElement:null;
@@ -1173,6 +1352,7 @@ function setView(v){
 
 /* ---------- 진행/표시 ---------- */
 function hud(q,force){
+  if(S.audioEl){ hudAudio(S.playing?S.audioEl.currentTime:audioTimeForQ(q),force); return; }
   var now=performance.now();
   if(!force&&now-S.hudAt<80) return;
   S.hudAt=now;
@@ -1183,15 +1363,30 @@ function hud(q,force){
   var pct=totalQ()>0?clamp(q/totalQ(),0,1)*100:0;
   $('progFill').style.width=pct.toFixed(2)+'%';
 }
+/* 원곡 재생 중 표시: 진행 바·시간은 오디오 길이 기준 */
+function hudAudio(t,force){
+  var now=performance.now();
+  var d=audioDur();
+  if(!force&&now-S.hudAt<80) return;
+  S.hudAt=now;
+  var q=qFromAudio(t);
+  var mi=measureIndexAtQ(q);
+  var m=S.measures[mi];
+  $('posBar').textContent=((m?m.number:mi+1)||1)+'/'+(S.measures.length||'-');
+  $('posTime').textContent=fmt(t)+' / '+fmt(d);
+  var pct=d>0?clamp(t/d,0,1)*100:0;
+  $('progFill').style.width=pct.toFixed(2)+'%';
+}
 function seekTo(q,noView){
   q=clamp(q,0,Math.max(0,totalQ()-0.005));
   S.seekQ=q;
+  if(S.audioEl&&audioDur()){ try{ S.audioEl.currentTime=audioTimeForQ(q); }catch(e){} }
   try{ Tone.Transport.ticks=toTicks(q); }catch(e){}
   var mi=measureIndexAtQ(q);
   S.currentMeasure=mi;
-  jumpCursorToMeasure(mi);
-  refineCursor(q);
-  placeHighlight(mi);
+  if(S.follow) jumpCursorToMeasure(mi);
+  if(S.follow){ refineCursor(q); placeHighlight(mi); }
+  else placeHighlight(mi);
   if(!noView) applyView(true);
   hud(q,true);
 }
@@ -1201,6 +1396,7 @@ function tick(){
   rafId=0;
   if(!S.playing) return;
   rafId=requestAnimationFrame(tick);
+  if(S.audioEl){ tickAudio(); return; }
   var q=Tone.Transport.ticks/tppq();
   if(!$('loop').checked&&q>=totalQ()-0.02){ stopPlay(); return; }
   S.seekQ=q;
@@ -1213,6 +1409,28 @@ function tick(){
   }
   refineCursor(q);
   hud(q,false);
+}
+function tickAudio(){
+  var a=S.audioEl; if(!a) return;
+  var t=a.currentTime, d=audioDur();
+  if($('loop').checked){
+    var te=Math.min(audioTimeForQ(loopBQ()), d?(d-0.02):Infinity);
+    if(t>=te-0.01){
+      try{ a.currentTime=audioTimeForQ(loopAQ()); t=a.currentTime; }catch(e){}
+    }
+  } else if(d&&t>=d-0.02){
+    stopPlay();
+    return;
+  }
+  var q=qFromAudio(t);
+  S.seekQ=q;
+  var mi=measureIndexAtQ(q);
+  if(mi!==S.currentMeasure){
+    S.currentMeasure=mi;
+    if(S.follow){ jumpCursorToMeasure(mi); placeHighlight(mi); applyView(true); }
+  }
+  if(S.follow) refineCursor(q);
+  hudAudio(t,false);
 }
 
 /* ---------- 입력 ---------- */
@@ -1259,9 +1477,19 @@ $('scoreView').addEventListener('click',function(ev){
 
 /* ---- 진행 바 : 탭·드래그 이동 ---- */
 function seekFromPoint(clientX){
-  if(!totalQ()) return;
   var r=$('progwrap').getBoundingClientRect();
   var pct=clamp((clientX-r.left)/Math.max(1,r.width),0,1);
+  if(S.audioEl&&audioDur()){
+    var t=pct*audioDur();
+    try{ S.audioEl.currentTime=t; }catch(e){}
+    var qa=qFromAudio(t);
+    S.seekQ=qa; S.currentMeasure=measureIndexAtQ(qa);
+    if(S.follow){ jumpCursorToMeasure(S.currentMeasure); refineCursor(qa); placeHighlight(S.currentMeasure); }
+    if(S.measures.length){ $('startBar').value=String(S.currentMeasure+1); applyLoopPoints(); }
+    hudAudio(t,true);
+    return;
+  }
+  if(!totalQ()) return;
   var q=pct*totalQ();
   $('startBar').value=String(measureIndexAtQ(q)+1);
   applyLoopPoints();
@@ -1279,10 +1507,10 @@ function seekFromPoint(clientX){
 /* ---- 마디 이동 (재생 중에도) ---- */
 function stepMeasure(dir){
   if(!S.measures.length) return;
-  var q0=S.playing?Tone.Transport.ticks/tppq():S.seekQ;
+  var q0=S.playing?(S.audioEl?qFromAudio(S.audioEl.currentTime):Tone.Transport.ticks/tppq()):S.seekQ;
   var mi=clamp(measureIndexAtQ(q0)+dir,0,S.measures.length-1);
   var q=measureStartQ(mi);
-  if(S.playing){
+  if(S.playing&&!S.audioEl){
     S.seekQ=q;
     try{ Tone.Transport.stop(); }catch(e){}
     if(window.Tone) Tone.Transport.bpm.value=S.tempo*speedFactor();
@@ -1300,8 +1528,7 @@ function stepMeasure(dir){
 $('btnScreen').addEventListener('click',function(){ openSheet('screen'); });
 $('btnOptions').addEventListener('click',function(){ openSheet('opt'); });
 $('btnMixer').addEventListener('click',function(){ openSheet('mix'); });
-$('barInfo').addEventListener('click',function(){ openSheet('opt'); });
-Array.prototype.forEach.call(document.querySelectorAll('[data-close]'),function(b){
+$('barInfo').addEventListener('click',function(){ openSheet('opt'); });Array.prototype.forEach.call(document.querySelectorAll('[data-close]'),function(b){
   b.addEventListener('click',function(){
     var k=b.getAttribute('data-close');
     if(k==='pick') closePicker(); else closeSheet(k);
@@ -1330,6 +1557,7 @@ function setSpeed(v){
   var lab=$('speedVal'); if(lab) lab.textContent=v+'%';
   syncPresets('speedPresets','s',v);
   if(window.Tone) Tone.Transport.bpm.value=S.tempo*(v/100);
+  if(S.audioEl){ try{ S.audioEl.playbackRate=clamp(v/100,0.5,2); }catch(e){} }
   updateBpm();
   var q=S.seekQ||0;
   try{ if(S.playing) q=Tone.Transport.ticks/tppq(); }catch(e){}
@@ -1531,6 +1759,87 @@ $('master').addEventListener('input',function(){
   applyMaster();
 });
 
+/* ---- 원곡 오디오 ---- */
+$('audioFile').addEventListener('change',function(ev){
+  var f=ev.target.files&&ev.target.files[0]; if(!f) return;
+  ev.target.value='';
+  loadAudioFile(f);
+});
+$('audioRemove').addEventListener('click',function(){ removeAudioFile(); });
+$('audioVol').addEventListener('input',function(){
+  S.audioVol=clamp(Number(this.value)||0,0,100);
+  var v=$('audioVolVal'); if(v) v.textContent=String(S.audioVol);
+  applyAudioGain();
+});
+$('audioMuteBtn').addEventListener('click',function(){
+  S.audioMute=!S.audioMute;
+  applyAudioGain();
+  refreshAudioUI();
+  status(S.audioMute?'원곡 오디오 음소거':'원곡 오디오 소리 켬');
+});
+$('syncMinus').addEventListener('click',function(){ setAudioSync((S.audioSync||0)-0.5); });
+$('syncPlus').addEventListener('click',function(){ setAudioSync((S.audioSync||0)+0.5); });
+$('follow').addEventListener('change',function(){ setFollow(this.checked); });
+function setFollow(on){
+  S.follow=!!on;
+  var c=$('follow'); if(c) c.checked=S.follow;
+  var hl=$('measureHl');
+  if(!S.follow){ if(hl) hl.style.opacity='0'; return; }
+  var q=S.playing&&S.audioEl?qFromAudio(S.audioEl.currentTime):(S.seekQ||0);
+  S.currentMeasure=measureIndexAtQ(q);
+  jumpCursorToMeasure(S.currentMeasure);
+  refineCursor(q);
+  placeHighlight(S.currentMeasure);
+  applyView(true);
+}
+
+/* ---- 시트별 초기화 ---- */
+function resetScreenSettings(){
+  setView('line');
+  setZoom(100);
+  var items=pickerItems();
+  items.forEach(function(it){ setVis(it.i,true); });
+  if(items.length) applyVisibility();
+  syncSheet('screen');
+  status('화면·악기 기본값으로 돌렸어 · 불러온 파일은 그대로');
+}
+function resetPlayOptions(){
+  setSpeed(100);
+  if(S.transpose) setTranspose(0,{silent:true});
+  var lp=$('loop'); if(lp) lp.checked=false;
+  var n=Math.max(1,S.measures.length||1);
+  $('startBar').max=String(n); $('endBar').max=String(n);
+  $('startBar').value='1'; $('endBar').value=String(n);
+  applyLoopPoints();
+  setFollow(true);
+  setAudioSync(0);
+  syncSheet('opt');
+  status('재생 옵션을 기본값으로 돌렸어 · 100% · 원키 · 반복 OFF');
+}
+function resetMixerSettings(){
+  S.masterVol=100;
+  var m=$('master'); if(m) m.value='100';
+  var mv=$('masterVal'); if(mv) mv.textContent='100';
+  S.trackState.forEach(function(t,i){
+    t.vol=100; t.mute=false; t.solo=false;
+    var ch=AU.ch[i]; if(ch){ try{ ch.volume.value=dbFor(100); }catch(e){} }
+  });
+  S.audioVol=100; S.audioMute=false;
+  applyMaster();
+  refreshAudioUI();
+  renderTracks();
+  syncSheet('mix');
+  status('믹서 기본값으로 돌렸어 · 마스터·악기 100%, M·S 해제');
+}
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest?ev.target.closest('[data-reset]'):null;
+  if(!b) return;
+  var k=b.getAttribute('data-reset');
+  if(k==='screen') resetScreenSettings();
+  else if(k==='opt') resetPlayOptions();
+  else if(k==='mix') resetMixerSettings();
+});
+
 /* ---- 키보드 (데스크톱) ---- */
 document.addEventListener('keydown',function(ev){
   var t=ev.target;
@@ -1594,6 +1903,7 @@ var SAMPLE_MIDI_B64='TVRoZAAAAAYAAQAEAeBNVHJrAAABOgD/AwhLZXlib2FyZAD/UQMJJ8AAwAA
 async function loadSample(){
   try{
     if(!window.opensheetmusicdisplay||!window.Midi||!window.Tone) throw new Error('라이브러리를 불러오지 못했어 (인터넷 연결 확인)');
+    if(S.audioEl) removeAudioFile(true);
     var xml=decodeBytes(b64ToBytes(SAMPLE_XML_B64));
     await loadXmlText(xml,'합주 연습 샘플');
     var m=b64ToBytes(SAMPLE_MIDI_B64);
@@ -1614,6 +1924,9 @@ window.__practice.api={
   setSpeed:setSpeed, stepMeasure:stepMeasure, renderTracks:renderTracks,
   setTranspose:setTranspose, updateTransposeUI:updateTransposeUI, isPercIns:isPercIns, isPercTrack:isPercTrack,
   semisForTrack:semisForTrack, percussionPartsFromXml:percussionPartsFromXml,
+  loadAudioFile:loadAudioFile, removeAudioFile:removeAudioFile, setFollow:setFollow, setAudioSync:setAudioSync,
+  qFromAudio:qFromAudio, audioTimeForQ:audioTimeForQ, audioDur:audioDur,
+  resetScreenSettings:resetScreenSettings, resetPlayOptions:resetPlayOptions, resetMixerSettings:resetMixerSettings,
   state:S, measureStartQ:measureStartQ, measureIndexAtQ:measureIndexAtQ, totalQ:totalQ
 };
 loadSample();
