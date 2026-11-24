@@ -967,10 +967,21 @@ function ensureTransposeCalc(){
   if(!TC) return false;
   try{ S.osmd.TransposeCalculator=new TC(); return !!S.osmd.TransposeCalculator; }catch(e){ return false; }
 }
+function scoreForDisplay(text){
+  var xml=new DOMParser().parseFromString(text,'application/xml');
+  var changed=false;
+  xml.querySelectorAll('note > notehead').forEach(function(head){
+    if(head.textContent.trim()!=='none') return;
+    // OSMD 1.9.2 draws a default head for "none" but honors its color.
+    head.setAttribute('color','#00000000');
+    changed=true;
+  });
+  return changed?new XMLSerializer().serializeToString(xml):text;
+}
 async function loadXmlText(text,name){
   ensureOsmd();
   status('악보 불러오는 중…');
-  await S.osmd.load(text);
+  await S.osmd.load(scoreForDisplay(text));
   S.sampleMidiOrder=null;
   S.sheet=S.osmd.Sheet;
   S.percParts=percussionPartsFromXml(text);
